@@ -56,4 +56,4 @@ python3 productScraper/manage.py runserver 9000
  
 
 # Flowchart
-![image](https://github.com/Tristan296/productScraper/assets/109927879/4466c491-7e4c-4ee5-92cc-b31aac458a75)
+<img width="733" height="600" alt="image" src="https://github.com/Tristan296/productScraper/assets/109927879/4466c491-7e4c-4ee5-92cc-b31aac458a75">
