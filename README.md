@@ -24,7 +24,7 @@ The idea is for it to be able to compare pricing across multiple large ecommerce
 
 # How to use 
 Prerequisite:
-**Ensure sure you have Python 3.8 or higher installed on your system. Then, install the required dependencies using pip:**
+**Ensure you have Python 3.8 or higher installed on your system. Then, install the required dependencies using pip:**
 1. Install Dependencies:
 ```
 pip install -r requirements.txt
