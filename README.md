@@ -1,9 +1,9 @@
-# Best-Price-Detector
+# Best-Price-Finder
 
-![GitHub](https://img.shields.io/github/license/Tristan296/productScraper)
+![GitHub](https://img.shields.io/github/license/Tristan296/best-price-finder)
 ![Python](https://img.shields.io/badge/python-v3.8%2B-blue)
 
-Best-Price-Detector's main function is to extract product information such as product names, prices, images, and a link to the website. Hardcoding selector pathways is a common method used by web scrapers to scrape information. The problem is that web developers frequently update these html selectors, which breaks the code. Instead, we took a different technique, examining the website's soup for language containing the product name. If this method fails to locate any products, it will get all relevant product links on the site and swiftly search through these links to obtain product information.
+Best-Price-Finder's main function is to extract product information such as product names, prices, images, and a link to the website. Hardcoding selector pathways is a common method used by web scrapers to scrape information. The problem is that web developers frequently update these html selectors, which breaks the code. Instead, we took a different technique, examining the website's soup for language containing the product name. If this method fails to locate any products, it will get all relevant product links on the site and swiftly search through these links to obtain product information.
 
 The idea is for it to be able to compare pricing across multiple large ecommerce sites to get the best prices.  
 
