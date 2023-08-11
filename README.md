@@ -25,15 +25,16 @@ The idea is for it to be able to compare pricing across multiple large ecommerce
 # How to use 
 Prerequisite:
 **Ensure you have Python 3.8 or higher installed on your system. Then, install the required dependencies using pip:**
-1. Install Dependencies:
+1. Clone the repository from https://github.com/Tristan296/best-price-finder.git 
+2. Install Dependencies:
 ```
 pip install -r requirements.txt
 ```
-2. Activate the django virtual environment:
+3. Activate the django virtual environment:
 ```python
 source venv/bin/activate
 ```
-3. Start the server and open it:
+4. Start the server and open it:
 ```python
 python3 productScraper/manage.py runserver 9000
 ```
