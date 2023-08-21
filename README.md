@@ -42,9 +42,6 @@ python3 productScraper/manage.py runserver 9000
 <img width="352" alt="Screenshot 2023-08-10 at 6 36 56 pm" src="https://github.com/Tristan296/productScraper/assets/109927879/70391c60-69c3-4f52-8267-c818e770d3b0">
 <img width="233" height="253" alt="image" src="https://github.com/Tristan296/productScraper/assets/109927879/006fee92-2dec-4714-b0b8-4d77e32a249d">
 
-# Limitations 
-- some products may be displayed either with the wrong price or image
-- doesn't work for all websites
 
 # Supported websites
 | Website       | Support     |
