@@ -48,7 +48,7 @@ async def fetch_sub_links(session, parent_href_formatted, product_name, sub_link
         print(f"Timeout fetching sub links from {parent_href_formatted}")
     except Exception:
         pass
-
+        
 async def get_sub_links(session, soup, product_name, website_name):
     sub_links = {}
     headers = {
@@ -92,8 +92,6 @@ async def get_url_formatting(product_name, website_name):
     url_formatted = website_urls[website_name]
     return url_formatted
 
-
-
 async def fetch_html(url_):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36"
@@ -113,7 +111,6 @@ async def get_soup(url_):
         print(f"Failed to fetch the webpage: {url_}")
         return None
 
-
 async def search_view(request):
     if request.method == 'POST':
         product_name = request.POST.get('product_name')
@@ -122,7 +119,6 @@ async def search_view(request):
         return render(request, 'productScraper/search_results.html', {'product_data': product_data})
     
     return render(request, 'productScraper/search_form.html')
-
 
 async def main(product_name, website_name):
     formatted_url = await get_url_formatting(product_name, website_name)
@@ -142,6 +138,8 @@ async def main(product_name, website_name):
                 print(f"Product Info:\n {product_info}\n")
 
             print(f"Total number of products found: {count}")
+
+            sub_links_dict = await get_sub_links(session, soup, product_name, website_name)
 
     end_time = time.time()
     elapsed_time = end_time - start_time
