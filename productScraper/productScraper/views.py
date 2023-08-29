@@ -3,123 +3,53 @@ import asyncio
 import re
 import time
 from urllib.parse import urljoin, urlparse
-import aiohttp
 from bs4 import BeautifulSoup, SoupStrainer
 from django.shortcuts import render
 from django.http import HttpResponse
 
-async def fetch_price(session, product_link):
+async def fetch_content(session, url):
     try:
-        async with session.get(product_link) as response:
-            html_content = await response.text()
-            return html_content
+        async with session.get(url) as response:
+            return await response.text()
     except Exception as e:
-        print(f"Error fetching {product_link}: {e}")
+        print(f"Error fetching {url}: {e}")
         return None
 
-async def extract_product_info(soup, product_name, website_name):
-    count = 0
-    product_data = {}
-    sub_links_dict = {}  # Use a dictionary to store sub-links for each product link
-    pattern = re.compile(re.escape(product_name), re.IGNORECASE)
-    matched_elements = soup.find_all(string=pattern)
+async def extract_price(soup):
+    price_pattern = r"\$\d+\.\d+|\£\d+|\d+\.\d+\s(?:USD|EUR)"
+    prices = re.findall(price_pattern, soup.text)
+    return prices[0] if prices else "Price not found"
 
-    session = aiohttp.ClientSession()
-    tasks = []
-    for element in matched_elements:
-        parent_element = element.find_parent()
-        product_link = parent_element.get("href")
+async def extract_product_data(element, html_content):
+    product_soup = BeautifulSoup(html_content, "lxml")
+    product_price = await extract_price(product_soup)
+    parent_element = element.find_parent()
+    product_link = parent_element.get("href")
+    return {
+        "link": product_link.strip(),
+        "price": product_price,
+        "name": element.strip(),
+        "parent_element": parent_element,
+    }
 
-        if product_link is not None and product_link.startswith(("http://", "https://")):
-            tasks.append(fetch_price(session, product_link))
-
-    html_contents = await asyncio.gather(*tasks)
-
-    print("Number of html_contents:", len(html_contents))
-
-    if len(html_contents) <= 10:  # Check if no products were found on the main page
-        sub_links_dict = await get_product_sub_links(soup, product_name, website_name)
-        sub_links_tasks = [
-            fetch_price(session, sub_link)
-            for sub_link_list in sub_links_dict.values()
-            for sub_link in sub_link_list
-        ]
-        sub_html_contents = await asyncio.gather(*sub_links_tasks)
-
-        for i, element in enumerate(matched_elements):
-            parent_element = element.find_parent()
-            product_link = parent_element.get("href")
-
-            if product_link is not None and product_link.startswith(("http://", "https://")):
-                if i < len(html_contents):
-                    sub_product_soup = BeautifulSoup(sub_html_contents[i], "lxml")
-                    price_pattern = r"\$\d+\.\d+|\£\d+|\d+\.\d+\s(?:USD|EUR)"
-                    prices = re.findall(price_pattern, sub_product_soup.text)
-
-                    if prices:
-                        product_price = prices[0]
-                    else:
-                        product_price = "Price not found"
-
-                    product_data[element.strip()] = {
-                        "link": product_link.strip(),
-                        "price": product_price,
-                        "name": element.strip(),
-                        "parent_element": parent_element,
-                    }
-                    count += 1
-    else:
-        for i, element in enumerate(matched_elements):
-            parent_element = element.find_parent()
-            product_link = parent_element.get("href")
-
-            if product_link is not None and product_link.startswith(("http://", "https://")):
-                if i < len(html_contents):
-                    product_soup = BeautifulSoup(html_contents[i], "lxml")
-                    price_pattern = r"\$\d+\.\d+|\£\d+|\d+\.\d+\s(?:USD|EUR)"
-                    prices = re.findall(price_pattern, product_soup.text)
-
-                    if prices:
-                        product_price = prices[0]
-                    else:
-                        product_price = "Price not found"
-
-                    product_data[element.strip()] = {
-                        "link": product_link.strip(),
-                        "price": product_price,
-                        "name": element.strip(),
-                        "parent_element": parent_element,
-                    }
-                    count += 1
-
-    await session.close()  # Close the aiohttp session
-
-    return product_data, count, sub_links_dict
-
-
-async def fetch_sub_links(session, parent_href_formatted, product_name, sub_links, timeout=3): 
-    try: 
+async def fetch_sub_links(session, parent_href_formatted, product_name, sub_links, timeout=3):
+    try:
         async with session.get(parent_href_formatted, timeout=timeout) as response:
             content = await response.read()
-            sub_soup = BeautifulSoup(
-                content, "html.parser", parse_only=SoupStrainer("a", href=True),
-                on_duplicate_attribute="replace"
-            )
+            sub_soup = BeautifulSoup(content, "html.parser", parse_only=SoupStrainer("a", href=True), on_duplicate_attribute="replace")
             sub_atags = sub_soup.find_all("a", href=True)
             for sub_atag in sub_atags:
                 href_sub = sub_atag.get("href")
                 sub_href = urljoin(parent_href_formatted, href_sub)
                 sub_href = urlparse(sub_href).geturl()
-                # if "/p/" in sub_href and product_name in sub_href and sub_href.startswith(("http://", "https://")):
                 sub_links.append(sub_href)
-                print(sub_href) 
+                print(sub_href)
     except asyncio.TimeoutError:
         print(f"Timeout fetching sub links from {parent_href_formatted}")
-
     except Exception:
         pass
 
-async def get_product_sub_links(soup, product_name, website_name):
+async def get_sub_links(session, soup, product_name, website_name):
     sub_links = {}
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36"
@@ -129,19 +59,17 @@ async def get_product_sub_links(soup, product_name, website_name):
 
     get_parent_url = set(soup.find_all("a", href=True))
 
-    async with aiohttp.ClientSession(headers=headers) as session:
-        tasks = []
-        for link in get_parent_url:
-            parent_href = link.get("href")
-            parent_href_formatted = urljoin(f"https://www.{website_name}.com.au", parent_href)
-            parent_href_formatted = urlparse(parent_href_formatted).geturl()
-            sub_links[parent_href_formatted] = []
-            tasks.append(fetch_sub_links(session, parent_href_formatted, product_name, sub_links[parent_href_formatted]))
+    tasks = []
+    for link in get_parent_url:
+        parent_href = link.get("href")
+        parent_href_formatted = urljoin(f"https://www.{website_name}.com.au", parent_href)
+        parent_href_formatted = urlparse(parent_href_formatted).geturl()
+        sub_links[parent_href_formatted] = []
+        tasks.append(fetch_sub_links(session, parent_href_formatted, product_name, sub_links[parent_href_formatted]))
 
-        await asyncio.gather(*tasks)
+    await asyncio.gather(*tasks)
 
     return sub_links
-
 
 async def get_url_formatting(product_name, website_name):
     product_end_formatted = product_name.replace(" ", "%20")
@@ -165,6 +93,7 @@ async def get_url_formatting(product_name, website_name):
     return url_formatted
 
 
+
 async def fetch_html(url_):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36"
@@ -176,7 +105,6 @@ async def fetch_html(url_):
             else:
                 return None
 
-
 async def get_soup(url_):
     html = await fetch_html(url_)
     if html:
@@ -184,6 +112,17 @@ async def get_soup(url_):
     else:
         print(f"Failed to fetch the webpage: {url_}")
         return None
+
+
+async def search_view(request):
+    if request.method == 'POST':
+        product_name = request.POST.get('product_name')
+        website_name = request.POST.get('website_name')
+        product_data = await main(product_name, website_name)
+        return render(request, 'productScraper/search_results.html', {'product_data': product_data})
+    
+    return render(request, 'productScraper/search_form.html')
+
 
 async def main(product_name, website_name):
     formatted_url = await get_url_formatting(product_name, website_name)
@@ -195,8 +134,8 @@ async def main(product_name, website_name):
         soup = await get_soup(formatted_url)
 
         if soup:
-            product_data, count, sub_links_dict = await extract_product_info(
-                soup, product_name, website_name
+            product_data, count, sub_links_dict = await extract_product_data(
+                product_name, session
             )
 
             for product_info in product_data.values():
@@ -208,15 +147,3 @@ async def main(product_name, website_name):
     elapsed_time = end_time - start_time
     print(f"Total time taken: {elapsed_time:.2f} seconds")
     return product_data
-    
-async def search_view(request):
-
-    if request.method == 'POST':
-        product_name = request.POST.get('product_name')
-        website_name = request.POST.get('website_name')
-
-        product_data = await main(product_name, website_name) 
-
-        return render(request, 'productScraper/search_results.html', {'product_data': product_data})
-
-    return render(request, 'productScraper/search_form.html')
