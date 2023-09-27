@@ -1,4 +1,4 @@
-aiohttp==3.7.4
-Django==4.2.4
+aiohttp==3.8.5
+Django==4.2.5
 BeautifulSoup==4.12.2
 lxml==4.9.3
