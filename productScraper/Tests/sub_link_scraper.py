@@ -51,9 +51,6 @@ async def scrape_links(session, url, timeout=None):
 
     return []
 
-# The rest of your code remains the same
-# ...
-
 async def main(product_name, website_name):
     formatted_url = await get_url_formatting(product_name, website_name)
     print(f"Now searching for {product_name} in url {formatted_url}")
@@ -96,5 +93,5 @@ async def fetch_html(url_):
 
 if __name__ == "__main__":
     product_name = "shoes"
-    website_name = "rebelsport"
+    website_name = "myer"
     asyncio.run(main(product_name, website_name))

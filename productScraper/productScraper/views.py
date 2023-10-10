@@ -29,6 +29,7 @@ async def fetch_sub_links(
                 "lxml",
                 parse_only=SoupStrainer(["a", "div", "span"]), 
             )
+            sub_links_count = 0
             sub_links_with_prices = []
             sub_links_set = set()  # Create a set to store unique sub-links
             sub_atags = sub_soup.find_all("a", href=True)
@@ -37,10 +38,11 @@ async def fetch_sub_links(
                 sub_href = urljoin(parent_href_formatted, href_sub)
                 sub_href = urlparse(sub_href).geturl()
                 if product_name in sub_href:
-                    sub_links_with_prices.append({"link": sub_href, "price": await get_sublink_price(session, sub_href)})
+                    sub_links_count+=1
+                    sub_links_with_prices.append({"link": sub_href, "price": await get_sublink_price(session, sub_href), "count": sub_links_count})
                     #ensure product name is in the link
                     sub_links_set.add(sub_href)
-
+                    
             print(sub_links_with_prices)
 
     except asyncio.TimeoutError:
@@ -288,7 +290,7 @@ async def search_view(request):
         website_name = request.POST.get("website_name")
 
         async with aiohttp.ClientSession() as session:
-            product_data, product_link = await main(product_name, website_name)
+            product_data, product_link, sub_links_with_prices = await main(product_name, website_name)
 
             # Call fetch_product_image to retrieve product images
             product_images = await fetch_product_image(session, product_name, product_link)
@@ -296,7 +298,7 @@ async def search_view(request):
         return render(
             request,
             "productScraper/search_results.html",
-            {"product_data": product_data, "product_images": product_images},
+            {"product_data": product_data, "product_images": product_images, "sub_links_with_prices": sub_links_with_prices},
         )
 
     return render(request, "productScraper/search_form.html")
@@ -311,7 +313,7 @@ async def main(product_name, website_name):
         soup = await get_soup(formatted_url)
 
         if soup:
-            product_data, product_link, _ = await extract_product_info(  # Include product_link
+            product_data, product_link, sub_links_with_prices = await extract_product_info(
                 soup, product_name, website_name, session
             )
 
@@ -327,4 +329,4 @@ async def main(product_name, website_name):
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"Total time taken: {elapsed_time:.2f} seconds")
-    return product_data, product_link
+    return product_data, product_link, sub_links_with_prices  # Include sub_links_with_prices

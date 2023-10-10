@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <title>Your Website Title</title>
     <!-- Add your CSS links here -->
 </head>
+
 <body>
     <div class="container">
         <div class="row">
@@ -14,9 +16,20 @@
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card product-card">
                     {% if product_info.image_url %}
-                        <img src="{{ product_info.image_url }}" alt="{{ product_info.name }} Image" class="card-img-top product-image">
+                    <img src="{{ product_info.image_url }}" alt="{{ product_info.name }} Image"
+                        class="card-img-top product-image">
+                    {% if sub_links_with_prices %}
+                    <h2>Sub-Links with Prices:</h2>
+                    <ul>
+                        {% for sub_link in sub_links_with_prices %}
+                        <li>
+                            <a href="{{ sub_link.link }}">{{ sub_link.link }}</a> - Price: {{ sub_link.price }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
                     {% else %}
-                        <div class="no-image-placeholder">No image available.</div>
+                    <div class="no-image-placeholder">No image available.</div>
                     {% endif %}
                     <div class="card-body">
                         <h5 class="card-title product-name">{{ product_info.name }}</h5>
@@ -29,4 +42,5 @@
         </div>
     </div>
 </body>
+
 </html>
