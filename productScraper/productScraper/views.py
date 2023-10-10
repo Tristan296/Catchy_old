@@ -19,30 +19,49 @@ async def fetch_price(session, product_link):
 
 
 async def fetch_sub_links(
-    session, parent_href_formatted, product_name, sub_links, timeout=3
+    session, parent_href_formatted, product_name, sub_links, timeout=10
 ):
     try:
         async with session.get(parent_href_formatted, timeout=timeout) as response:
             content = await response.read()
             sub_soup = BeautifulSoup(
                 content,
-                "html.parser",
-                parse_only=SoupStrainer("a", href=True),
-                on_duplicate_attribute="replace",
+                "lxml",
+                parse_only=SoupStrainer(["a", "div", "span"]), 
             )
+            sub_links_with_prices = []
+            sub_links_set = set()  # Create a set to store unique sub-links
             sub_atags = sub_soup.find_all("a", href=True)
             for sub_atag in sub_atags:
                 href_sub = sub_atag.get("href")
                 sub_href = urljoin(parent_href_formatted, href_sub)
                 sub_href = urlparse(sub_href).geturl()
-                sub_links.append(sub_href)
-                print(sub_href)
+                if product_name in sub_href:
+                    sub_links_with_prices.append({"link": sub_href, "price": await get_sublink_price(session, sub_href)})
+                    #ensure product name is in the link
+                    sub_links_set.add(sub_href)
+
+            print(sub_links_with_prices)
 
     except asyncio.TimeoutError:
         print(f"Timeout fetching sub links from {parent_href_formatted}")
+    except Exception as e:
+        print(f"Error fetching sub links from {parent_href_formatted}: {e}")
     except Exception:
         pass
 
+    return sub_links
+
+
+async def get_sublink_price(session, sub_href):
+    try:
+        async with session.get(sub_href) as response:
+            html_content = await response.text()
+            price_pattern = r"\$\d+\.\d+|\£\d+|\d+\.\d+\s(?:USD|EUR)"
+            prices = re.findall(price_pattern, html_content)
+            return prices[0] if prices else "Price not found"
+    except Exception:
+        return "Price not found"
 
 async def get_product_sub_links(session, soup, product_name, website_name):
     sub_links = {}
@@ -56,12 +75,7 @@ async def get_product_sub_links(session, soup, product_name, website_name):
 
     async with aiohttp.ClientSession(headers=headers) as session:
         tasks = [
-            fetch_sub_links(
-                session,
-                urljoin(f"https://www.{website_name}.com.au", link.get("href")),
-                product_name,
-                getUrl,
-            )
+            fetch_sub_links(session, urljoin(f"https://www.{website_name}.com.au", link.get("href")), product_name, getUrl)
             for link in get_parent_url
         ]
         await asyncio.gather(*tasks)
@@ -250,7 +264,7 @@ async def get_url_formatting(product_name, website_name):
     product_formatted = product_name.replace(" ", "+")
     website_urls = {
         "rebelsport": f"https://www.rebelsport.com.au/search?q={product_end_formatted}",
-        "harveynorman": f"https://www.harveynorman.com.au/search?q={product_formatted}",
+        "harveynorman": f"https://www.harveynorman.com.au/catalogsearch/result/?q={product_formatted}",
         "ebay": f"https://www.ebay.com.au/sch/i.html?_from=R40&_trksid=p4432023.m570.l1313&_nkw={product_formatted}&_sacat=0",
         "thegoodguys": f"https://www.thegoodguys.com.au/SearchDisplay?categoryId=&storeId=900&catalogId=30000&langId=-1&sType=SimpleSearch&resultCatEntryType=2&showResultsPage=true&searchSource=Q&pageView=&beginIndex=0&orderBy=0&pageSize=30&searchTerm={product_formatted}",
         "kogan": f"https://www.kogan.com/au/shop/?q={product_formatted}",
@@ -258,6 +272,7 @@ async def get_url_formatting(product_name, website_name):
         "jbhifi": f"https://www.jbhifi.com.au/search?page=1&query={product_end_formatted}&saleItems=false&toggle%5BonPromotion%5D=false",
         "ajeworld": f"https://ajeworld.com.au/collections/shop?q={product_formatted}",
         "myer": f"https://www.myer.com.au/search?query={product_formatted}",
+        "nike": f"https://www.nike.com/au/w?q={product_end_formatted}&vst={product_end_formatted}"
     }
     if website_name not in website_urls:
         print("Unsupported website name:", website_name)
