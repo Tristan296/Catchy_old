@@ -21,6 +21,19 @@
             </div>
         </div>
         {% endfor %}
+       <!-- Display sub_links_with_prices -->
+       {% for sub_link_info in sub_links_with_prices %}
+       <div class="col-md-6 col-lg-4 mb-4">
+           <div class="card sub-link-card">
+               <div class="card-body">
+                   <h5 class="card-title sub-link-name">Sub-Link</h5>
+                   <p class="card-text sub-link-price">Price: {{ sub_link_info.price }}</p>
+                   <a href="{{ sub_link_info.link }}" class="btn btn-secondary">View Sub-Link</a>
+               </div>
+           </div>
+       </div>
+       {% endfor %}
+       
     </div>
 </div>
 {% endblock %}

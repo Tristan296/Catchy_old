@@ -38,12 +38,18 @@ async def fetch_sub_links(
                 sub_href = urljoin(parent_href_formatted, href_sub)
                 sub_href = urlparse(sub_href).geturl()
                 if product_name in sub_href:
-                    sub_links_count+=1
-                    sub_links_with_prices.append({"link": sub_href, "price": await get_sublink_price(session, sub_href), "count": sub_links_count})
-                    #ensure product name is in the link
+                    sub_links_count += 1
+                    sub_links_with_prices.append({
+                        "link": sub_href,
+                        "price": await get_sublink_price(session, sub_href),
+                        "count": sub_links_count
+                    })
+                    # Ensure product name is in the link
                     sub_links_set.add(sub_href)
                     
             print(sub_links_with_prices)
+
+        return sub_links_with_prices
 
     except asyncio.TimeoutError:
         print(f"Timeout fetching sub links from {parent_href_formatted}")
@@ -52,9 +58,9 @@ async def fetch_sub_links(
     except Exception:
         pass
 
-    return sub_links
-
-
+    return []
+    
+    
 async def get_sublink_price(session, sub_href):
     try:
         async with session.get(sub_href) as response:
@@ -64,9 +70,10 @@ async def get_sublink_price(session, sub_href):
             return prices[0] if prices else "Price not found"
     except Exception:
         return "Price not found"
+    
 
 async def get_product_sub_links(session, soup, product_name, website_name):
-    sub_links = {}
+    sub_links = []
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36"
     }
@@ -80,9 +87,14 @@ async def get_product_sub_links(session, soup, product_name, website_name):
             fetch_sub_links(session, urljoin(f"https://www.{website_name}.com.au", link.get("href")), product_name, getUrl)
             for link in get_parent_url
         ]
-        await asyncio.gather(*tasks)
+        sub_links_with_prices = await asyncio.gather(*tasks)
+
+    # Merge the sub-links with prices from all tasks into one list
+    for links_with_prices in sub_links_with_prices:
+        sub_links.extend(links_with_prices)
 
     return sub_links
+
 
 async def extract_images(soup, product_name):
     image_sources = []
@@ -99,6 +111,8 @@ async def extract_images(soup, product_name):
             src = img.get("src")
             if src:
                 image_sources.append(src)
+            else: 
+                image_sources.append("N/A")
 
     return image_sources
 
@@ -130,6 +144,7 @@ async def extract_product_info(soup, product_name, website_name, session):
     count = 0
     product_data = {}
     sub_links_dict = {}
+    sub_links_with_prices = []
     pattern = re.compile(re.escape(product_name), re.IGNORECASE)
     matched_elements = soup.find_all(string=pattern)
 
@@ -145,26 +160,10 @@ async def extract_product_info(soup, product_name, website_name, session):
     print("Number of html_contents:", len(html_contents))
 
     if len(html_contents) <= 10:
-        sub_links_dict = await get_product_sub_links(session, soup, product_name, website_name)
-        sub_links_tasks = [
-            fetch_price(session, sub_link)
-            for sub_link_list in sub_links_dict.values()
-            for sub_link in sub_link_list
-        ]
-        sub_html_contents = await asyncio.gather(*sub_links_tasks)
-        await process_matched_elements(
-            product_name,
-            matched_elements,
-            html_contents,
-            product_data,
-        )
-    else:
-        await process_matched_elements(
-            product_name, matched_elements, html_contents, product_data
-        )
-
-    return product_data, count, sub_links_dict
-
+        # Collect sub-links with prices and add them to sub_links_with_prices
+        sub_links_with_prices = await get_product_sub_links(session, soup, product_name, website_name)
+        
+        return product_data, sub_links_with_prices
 
 async def extract_product_price(html_content):
     price_pattern = r"\$\d+\.\d+|\£\d+|\d+\.\d+\s(?:USD|EUR)"
@@ -283,17 +282,19 @@ async def get_url_formatting(product_name, website_name):
     url_formatted = website_urls[website_name]
     return url_formatted
 
-
 async def search_view(request):
     if request.method == "POST":
         product_name = request.POST.get("product_name")
         website_name = request.POST.get("website_name")
 
         async with aiohttp.ClientSession() as session:
-            product_data, product_link, sub_links_with_prices = await main(product_name, website_name)
+            results = await main(product_name, website_name, session)
+
+            # Separate the results into product_data and sub_links_with_prices
+            product_data, sub_links_with_prices = results
 
             # Call fetch_product_image to retrieve product images
-            product_images = await fetch_product_image(session, product_name, product_link)
+            product_images = await fetch_product_image(session, product_name, results)
 
         return render(
             request,
@@ -303,30 +304,28 @@ async def search_view(request):
 
     return render(request, "productScraper/search_form.html")
 
-async def main(product_name, website_name):
+async def main(product_name, website_name, session):
     formatted_url = await get_url_formatting(product_name, website_name)
     print(f"Now searching for {product_name} in url {formatted_url}")
 
     start_time = time.time()
 
-    async with aiohttp.ClientSession() as session:
-        soup = await get_soup(formatted_url)
+    soup = await get_soup(formatted_url)
 
-        if soup:
-            product_data, product_link, sub_links_with_prices = await extract_product_info(
-                soup, product_name, website_name, session
-            )
+    if soup:
+        product_data, sub_links_with_prices = await extract_product_info(
+            soup, product_name, website_name, session
+        )
 
-            # Call fetch_product_image to retrieve product images
-            for product_info in product_data.values():
-                product_info["image_url"] = await fetch_product_image(session, product_name, product_info["link"])
+        for product_info in product_data.values():
+            print(f"Product Info:\n {product_info}\n")
 
-            for product_info in product_data.values():
-                print(f"Product Info:\n {product_info}\n")
+        for sub_link_info in sub_links_with_prices:
+            print(f"Sub-Link Info:\n {sub_link_info}\n")
 
-            print(f"Total number of products found: {len(product_data)}")
+        print(f"Total number of products found: {len(product_data or sub_links_with_prices)}")
 
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"Total time taken: {elapsed_time:.2f} seconds")
-    return product_data, product_link, sub_links_with_prices  # Include sub_links_with_prices
+    return product_data, sub_links_with_prices
