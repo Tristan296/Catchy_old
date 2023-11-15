@@ -15,8 +15,8 @@
             {% for sub_link in sub_links_with_prices %}
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card product-card">
-                    {% if sub_link.imageURL and sub_link.imageURL.0 != "N/A" %}
-                        <img src="{{ sub_link.imageURL.0 }}" alt="{{ sub_link.link }} Image"
+                    {% if sub_link.img and sub_link.img != "N/A" %}
+                        <img src="{{ sub_link.img }}" alt="{{ sub_link.link }} Image"
                             class="card-img-top product-image">
                     {% else %}
                         <div class="no-image-placeholder">No image available.</div>
