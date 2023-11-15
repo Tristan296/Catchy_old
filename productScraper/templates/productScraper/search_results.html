@@ -1,38 +1,36 @@
-{% extends 'productScraper/base.html' %}
-{% load static %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block content %}
-<div class="container">
-    <div class="row">
-        {% for product_info in product_data.values %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card product-card">
-                {% if product_info.image_url %}
-                    <img src="{{ product_info.image_url }}" alt="{{ product_info.name }} Image" class="card-img-top product-image">
-                {% else %}
-                    <div class="no-image-placeholder">No image available for product: {{ product_info.name }}</div>
-                {% endif %}
-                <div class="card-body">
-                    <h5 class="card-title product-name">{{ product_info.name }}</h5>
-                    <p class="card-text product-price">Price: {{ product_info.price }}</p>
-                    <a href="{{ product_info.link }}" class="btn btn-primary">View Product</a>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="static/css/styles.css">
+    <title>Your Website Title</title>
+    <!-- Add your CSS links here -->
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            {% for sub_link in sub_links_with_prices %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card product-card">
+                    {% if sub_link.imageURL and sub_link.imageURL.0 != "N/A" %}
+                        <img src="{{ sub_link.imageURL.0 }}" alt="{{ sub_link.link }} Image"
+                            class="card-img-top product-image">
+                    {% else %}
+                        <div class="no-image-placeholder">No image available.</div>
+                    {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title product-name">{{ sub_link.name }}</h5>
+                            <p class="card-text product-price">Price: {{ sub_link.price }}</p>
+                            <a href="{{ sub_link.link }}" class="btn btn-primary">View Product</a>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-       <!-- Display sub_links_with_prices -->
-       {% for sub_link_info in sub_links_with_prices %}
-       <div class="col-md-6 col-lg-4 mb-4">
-           <div class="card sub-link-card">
-               <div class="card-body">
-                   <h5 class="card-title sub-link-name">Sub-Link</h5>
-                   <p class="card-text sub-link-price">Price: {{ sub_link_info.price }}</p>
-                   <a href="{{ sub_link_info.link }}" class="btn btn-secondary">View Sub-Link</a>
-               </div>
-           </div>
-       </div>
-       {% endfor %}
-       
     </div>
-</div>
-{% endblock %}
+</body>
+
+</html>

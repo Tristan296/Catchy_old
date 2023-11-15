@@ -12,32 +12,22 @@
 <body>
     <div class="container">
         <div class="row">
-            {% for product_info in product_data.values %}
+            {% for sub_link in sub_links_with_prices %}
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card product-card">
-                    {% if product_info.image_url %}
-                    <img src="{{ product_info.image_url }}" alt="{{ product_info.name }} Image"
-                        class="card-img-top product-image">
-                    {% if sub_links_with_prices %}
-                    <h2>Sub-Links with Prices:</h2>
-                    <ul>
-                        {% for sub_link in sub_links_with_prices %}
-                        <li>
-                            <a href="{{ sub_link.link }}">{{ sub_link.link }}</a> - Price: {{ sub_link.price }}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    {% endif %}
+                    {% if sub_link.imageURL and sub_link.imageURL != ["N/A"] %}
+                        <img src="{{ sub_link.imageURL }}" alt="{{ sub_link.link }} Image"
+                            class="card-img-top product-image">
                     {% else %}
-                    <div class="no-image-placeholder">No image available.</div>
+                        <div class="no-image-placeholder">No image available.</div>
                     {% endif %}
-                    <div class="card-body">
-                        <h5 class="card-title product-name">{{ product_info.name }}</h5>
-                        <p class="card-text product-price">Price: {{ product_info.price }}</p>
-                        <a href="{{ product_info.link }}" class="btn btn-primary">View Product</a>
+                        <div class="card-body">
+                            <h5 class="card-title product-name">{{ sub_link.link }}</h5>
+                            <p class="card-text product-price">Price: {{ sub_link.price }}</p>
+                            <a href="{{ sub_link.link }}" class="btn btn-primary">View Product</a>
+                        </div>
                     </div>
                 </div>
-            </div>
             {% endfor %}
         </div>
     </div>
