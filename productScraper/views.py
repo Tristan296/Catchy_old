@@ -40,10 +40,15 @@ async def fetch_sub_links(
                 if product_name in sub_href and '/p' in sub_href:
                     
                     # get product image for each products <a> tag 
-                    img_link = sub_atag.find("img").get("src")
+                    img_element = sub_atag.find("img", alt=True)
+                    
+                    # get image link from <a> tag
+                    img_link = img_element.get("src")
+                    img_name = await extract_product_name_from_link(sub_href)
                     
                     sub_links_count += 1
                     sub_links_with_prices.append({
+                        "name": img_name,
                         "link": sub_href,
                         "price": await get_sublink_price(session, sub_href),
                         "img": img_link,
@@ -65,6 +70,22 @@ async def fetch_sub_links(
 
     return []
     
+async def extract_product_name_from_link(sub_href):
+    # Modify this function based on the structure of the URLs to extract the last part
+    # This assumes that the last part of the path contains the product name
+    parts = urlparse(sub_href)
+    path_parts = parts.path.split('/')
+
+    # Check if the URL has a valid path
+    if path_parts:
+        # Find the last non-empty part in the path
+        for part in reversed(path_parts):
+            if part:
+                # Extract the product name from the last part
+                return part.strip().replace("-", " ")
+
+    return None
+
     
 async def get_sublink_price(session, sub_href):
     try:
@@ -100,50 +121,6 @@ async def get_product_sub_links(session, soup, product_name, website_name):
 
     return sub_links
 
-
-async def extract_images(soup, product_name):
-    image_sources = []
-    # Find all image elements in the HTML
-    images = soup.find_all("img", alt=True)
-
-    for img in images:
-        # Extract the 'alt' attribute of each image element
-        alt = img.get("alt")
-        
-        # Ensure that the 'alt' attribute contains the product name
-        if alt and product_name.lower() in alt.lower():
-            # Extract the 'src' attribute
-            src = img.get("src")
-            if src:
-                image_sources.append(src)
-            else: 
-                image_sources.append("N/A")
-
-    return image_sources
-
-
-async def fetch_product_image(session, product_name, product_link):
-    try:
-        async with session.get(product_link) as response:
-            html_content = await response.text()
-            product_soup = BeautifulSoup(html_content, "html.parser", parse_only=SoupStrainer('img'))
-            
-            # Use the extract_images function to get image sources
-            image_sources = await extract_images(product_soup, product_name)
-            
-            # Initialize image_url to None
-            image_url = None
-
-            # Check if there are image sources
-            if image_sources:
-                # Use the first image source as the product image URL
-                image_url = image_sources[0]
-
-            return image_url
-    except Exception as e:
-        print(f"Error fetching image from {product_link}: {e}")
-        return None
-        
 
 async def extract_product_info(soup, product_name, website_name, session):
     count = 0
@@ -224,10 +201,6 @@ async def process_matched_elements(product_name, matched_elements, html_contents
         if not product_price:
             continue
 
-        # Get the image URL for the product
-        async with aiohttp.ClientSession() as session:
-            image_url = await fetch_product_image(session, product_name, product_link)
-        
         # Extract the nearest price to the image
         async with aiohttp.ClientSession() as session:
             soup = await get_soup(product_link)
@@ -298,13 +271,10 @@ async def search_view(request):
             # Separate the results into product_data and sub_links_with_prices
             product_data, sub_links_with_prices = results
 
-            # Call fetch_product_image to retrieve product images
-            product_images = await fetch_product_image(session, product_name, results)
-
         return render(
             request,
             "productScraper/search_results.html",
-            {"product_data": product_data, "product_images": product_images, "sub_links_with_prices": sub_links_with_prices},
+            {"product_data": product_data, "sub_links_with_prices": sub_links_with_prices},
         )
 
     return render(request, "productScraper/search_form.html")
