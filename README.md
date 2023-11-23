@@ -40,7 +40,7 @@ pip install -r requirements.txt
 ```
 3. Start the server and open it:
 ```python
-python3 productScraper/manage.py runserver 9000
+python3 manage.py runserver
 ```
 4. Fill out the form and products will be displayed:
 <img width="352" alt="Screenshot 2023-08-10 at 6 36 56 pm" src="https://github.com/Tristan296/productScraper/assets/109927879/70391c60-69c3-4f52-8267-c818e770d3b0">
