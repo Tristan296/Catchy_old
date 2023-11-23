@@ -47,9 +47,3 @@ python3 manage.py runserver
 <img width="233" height="253" alt="image" src="https://github.com/Tristan296/productScraper/assets/109927879/006fee92-2dec-4714-b0b8-4d77e32a249d">
 
 
-# Supported websites
-| Website       | Support     |
-| -----------   | ----------- |
-| Rebel Sport   |✅           |
- 
-
